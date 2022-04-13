@@ -25,7 +25,6 @@ class Board:
             images[piece] = p.transform.scale(p.image.load(r'images/' + piece + '.png'), (self.sq_size, self.sq_size))
         return images
 
-
     def initializeBoard(self):
         if self.player_color == 'b':
             board = np.array([
@@ -43,9 +42,9 @@ class Board:
                 ['bR1', 'bN1', 'bB1', 'bQ1', 'bK1', 'bB2', 'bN2', 'bR2'],
                 ['bp1', 'bp2', 'bp3', 'bp4', 'bp5', 'bp6', 'bp7', 'bp8'],
                 [None, None, None, None, None, None, None, None],
-                [None, None, None, None, None, None, None, None],
-                [None, None, None, None, None, None, None, None],
-                [None, None, None, None, None, None, None, None],
+                [None, None, None, 'wN3', None, None, None, None],
+                [None, None, None, 'wN4', None, None, None, None],
+                [None, None, None, 'wN5', None, None, None, None],
                 ['wp1', 'wp2', 'wp3', 'wp4', 'wp5', 'wp6', 'wp7', 'wp8'],
                 ['wR1', 'wN1', 'wB1', 'wQ1', 'wK1', 'wB2', 'wN2', 'wR2']
             ])
@@ -81,12 +80,14 @@ class Board:
         for key, value in pieces.items():
             self.game_state[pieces[key].row][pieces[key].col] = value
 
-    def drawGameState(self, screen):
+    def drawGameState(self, screen, start_pos, legal_moves):
         """
         controls the drawing work flow
         """
         self.drawSquares(screen)
         self.drawPieces(screen)
+        if start_pos and legal_moves:
+            self.drawLegalMoves(screen, start_pos, legal_moves)
 
     def drawSquares(self, screen):
         """
@@ -108,6 +109,12 @@ class Board:
                 if piece:  # not an empty square
                     screen.blit(self.images[piece.name[:2]], p.Rect(col * self.sq_size, row * self.sq_size, self.sq_size, self.sq_size))
 
+    def drawLegalMoves(self, screen, start_pos, legal_moves):
+        p.draw.rect(screen, [189, 0, 0], p.Rect(start_pos[1] * self.sq_size, start_pos[0] * self.sq_size, self.sq_size, self.sq_size), 1)
+        for legal_move in legal_moves:
+            p.draw.circle(screen, [189, 0, 0], ((legal_move[1] * self.sq_size)+self.sq_size//2, (legal_move[0] * self.sq_size)+self.sq_size//2), self.sq_size//2, 1)
+
+
     def click(self):
         location = p.mouse.get_pos()  # (x,y) location of mouse
         col = location[0] // self.sq_size
@@ -115,14 +122,16 @@ class Board:
         square_name = self.getSquareName(row, col)
         if self.game_state[row][col]:
             piece = self.game_state[row][col]
-            legal_moves = piece.getLegalMoves(self.game_state, self.white_to_move)
+            start_pos, legal_moves = piece.getLegalMoves(self.game_state, self.white_to_move)
+            print(piece)
             print(piece.name, piece.row, piece.col)
             print(legal_moves)
             print(square_name)
-            return [row, col]
         else:
+            legal_moves = []
+            start_pos = []
             print(square_name)
-            return []
+        return start_pos, legal_moves
 
     def getSquareName(self, row, col):
         if self.player_color == 'b':
