@@ -12,9 +12,10 @@ clock = p.time.Clock()
 screen.fill(p.Color('white'))
 player_color = 'w'
 board = Board(width, height, player_color)
-player_clicks = []  # keep track of player clicks [(6,4), (4,4)]
+player_clicks = []
 start_pos_piece = []
 legal_moves = []
+move_log = []
 
 running = True
 while running:
@@ -23,7 +24,16 @@ while running:
             running = False
         elif event.type == p.MOUSEBUTTONDOWN:
             if event.button == 1:  # left click
-                start_pos_piece, legal_moves = board.click()
+                start_pos_piece, legal_moves, player_clicks = board.click(legal_moves, player_clicks)
+                if len(player_clicks) == 2:
+                    move_success = board.performMove(player_clicks, legal_moves)
+                    player_clicks = []
+                    legal_moves = []
+                    if move_success:
+                        if board.color_to_move == 'w':
+                            board.color_to_move = 'b'
+                        else:
+                            board.color_to_move = 'w'
             elif event.button == 3:  # right click
                 player_clicks = []
                 legal_moves = []

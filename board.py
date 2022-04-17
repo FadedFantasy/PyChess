@@ -1,6 +1,6 @@
 import pygame as p
 import numpy as np
-from pieces import King, Queen, Pawn, Bishop, Knight, Rook
+from pieces import King, Queen, Pawn, Bishop, Knight, Rook, Piece
 
 
 class Board:
@@ -12,7 +12,7 @@ class Board:
         self.game_state = self.initializeBoard()
         self.images = self.loadImages()
         self.pieces = self.initializePieces()
-        self.white_to_move = True
+        self.color_to_move = 'w'
 
     def loadImages(self):
         """
@@ -42,9 +42,9 @@ class Board:
                 ['bR1', 'bN1', 'bB1', 'bQ1', 'bK1', 'bB2', 'bN2', 'bR2'],
                 ['bp1', 'bp2', 'bp3', 'bp4', 'bp5', 'bp6', 'bp7', 'bp8'],
                 [None, None, None, None, None, None, None, None],
-                [None, None, None, 'wN3', None, None, None, None],
-                [None, None, None, 'wN4', None, None, None, None],
-                [None, None, None, 'wN5', None, None, None, None],
+                [None, None, None, None, None, None, None, None],
+                [None, None, None, None, None, None, None, None],
+                [None, None, None, None, None, None, None, None],
                 ['wp1', 'wp2', 'wp3', 'wp4', 'wp5', 'wp6', 'wp7', 'wp8'],
                 ['wR1', 'wN1', 'wB1', 'wQ1', 'wK1', 'wB2', 'wN2', 'wR2']
             ])
@@ -52,7 +52,7 @@ class Board:
 
     def initializePieces(self):
         """
-        pieces is a dict that contains all piece objects
+        pieces is a dict that contains all piece objects/instances
         """
         pieces = {}
         for row in range(self.game_state.shape[0]):
@@ -61,7 +61,7 @@ class Board:
                 if self.game_state[row][col]:
                     # second letter
                     if self.game_state[row][col][1] == 'p':
-                        pieces[self.game_state[row][col]] = Pawn(row, col, self.game_state[row][col][0], self.game_state[row][col])
+                        pieces[self.game_state[row][col]] = Pawn(row, col, self.game_state[row][col][0], self.game_state[row][col], row)
                     elif self.game_state[row][col][1] == 'R':
                         pieces[self.game_state[row][col]] = Rook(row, col, self.game_state[row][col][0], self.game_state[row][col])
                     elif self.game_state[row][col][1] == 'N':
@@ -110,28 +110,53 @@ class Board:
                     screen.blit(self.images[piece.name[:2]], p.Rect(col * self.sq_size, row * self.sq_size, self.sq_size, self.sq_size))
 
     def drawLegalMoves(self, screen, start_pos, legal_moves):
-        p.draw.rect(screen, [189, 0, 0], p.Rect(start_pos[1] * self.sq_size, start_pos[0] * self.sq_size, self.sq_size, self.sq_size), 1)
+        p.draw.rect(screen, [189, 0, 0], p.Rect(start_pos[1] * self.sq_size, start_pos[0] * self.sq_size, self.sq_size, self.sq_size), 3)
         for legal_move in legal_moves:
-            p.draw.circle(screen, [189, 0, 0], ((legal_move[1] * self.sq_size)+self.sq_size//2, (legal_move[0] * self.sq_size)+self.sq_size//2), self.sq_size//2, 1)
+            p.draw.circle(screen, [189, 0, 0], ((legal_move[1] * self.sq_size)+self.sq_size//2, (legal_move[0] * self.sq_size)+self.sq_size//2), self.sq_size//2, 3)
 
-
-    def click(self):
+    def click(self, legal_moves, player_clicks):
         location = p.mouse.get_pos()  # (x,y) location of mouse
         col = location[0] // self.sq_size
         row = location[1] // self.sq_size
         square_name = self.getSquareName(row, col)
-        if self.game_state[row][col]:
+        # select first piece to move
+        if Piece.checkOccupied(row, col, self.game_state) and not player_clicks:
             piece = self.game_state[row][col]
-            start_pos, legal_moves = piece.getLegalMoves(self.game_state, self.white_to_move)
+            start_pos = [row, col]
+            legal_moves = piece.getLegalMoves(self.game_state, self.color_to_move)
+            if legal_moves:
+                player_clicks.append(start_pos)
             print(piece)
             print(piece.name, piece.row, piece.col)
             print(legal_moves)
             print(square_name)
-        else:
-            legal_moves = []
+        # choose free square
+        elif not Piece.checkOccupied(row, col, self.game_state) and player_clicks:
             start_pos = []
+            end_pos = [row, col]
+            player_clicks.append(end_pos)
+        # choose occupied square
+        elif Piece.checkOccupied(row, col, self.game_state) and player_clicks:
+            start_pos = []
+            end_pos = [row, col]
+            player_clicks.append(end_pos)
+        # click on free square without having chosen a piece before or trying to move wrong piece
+        else:
+            start_pos = []
+            legal_moves = []
             print(square_name)
-        return start_pos, legal_moves
+        return start_pos, legal_moves, player_clicks
+
+    def performMove(self, player_clicks, legal_moves):
+        if player_clicks[1] in legal_moves:
+            piece = self.game_state[player_clicks[0][0]][player_clicks[0][1]]
+            piece.row = player_clicks[1][0]
+            piece.col = player_clicks[1][1]
+            self.game_state[player_clicks[1][0]][player_clicks[1][1]] = piece
+            self.game_state[player_clicks[0][0]][player_clicks[0][1]] = None
+            return True
+        else:
+            return False
 
     def getSquareName(self, row, col):
         if self.player_color == 'b':

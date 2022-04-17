@@ -3,20 +3,39 @@ class Piece:
         pass
 
     @staticmethod
-    def checkBoundaries(new_row, new_col):
-        return 0 <= new_row <= 7 and 0 <= new_col <= 7
+    def checkBoundaries(row, col):
+        """
+        checks if a square is inside the 8x8 board
+        :param(int) row: row of the square
+        :param(int) col: col of the square
+        :return(bool): if the square is inside boundary (valid square)
+        """
+        return 0 <= row <= 7 and 0 <= col <= 7
 
     @staticmethod
-    def checkColorTurn(color, white_to_move):
-        return (color == 'w' and white_to_move) or (color == 'b' and not white_to_move)
+    def checkColorTurn(color, color_to_move):
+        """
+        checks if the right colored piece wants to move when choosing a piece
+        :param(str) color: color of the chosen piece
+        :param(bool) color_to_move: bool that determines if it is whites turn
+        :return(bool): True if right piece is to move
+        """
+        return color == color_to_move
 
     @staticmethod
     def checkCapturedColor(color_of_moved, color_of_captured):
         return color_of_moved != color_of_captured
 
     @staticmethod
-    def checkOccupied(new_row, new_col, game_state):
-        return game_state[new_row, new_col] is not None
+    def checkOccupied(row, col, game_state):
+        """
+        checks if a square is occupied and return True if it is
+        :param(int) row: row of the square
+        :param(int) col: col of the square
+        :param game_state: the whole board with the current pieces as an 8x8 matrix
+        :return(bool): if square is occupied
+        """
+        return game_state[row, col] is not None
 
 
 class King(Piece):
@@ -28,10 +47,9 @@ class King(Piece):
         self.name = name
         self.value = 100
 
-    def getLegalMoves(self, game_state, white_to_move):
+    def getLegalMoves(self, game_state, color_to_move):
         legal_moves = []
-        start_pos = [self.row, self.col]
-        if self.checkColorTurn(self.color, white_to_move):
+        if self.checkColorTurn(self.color, color_to_move):
             rows_add = [1, -1, 0, 0, 1, 1, -1, -1]
             cols_add = [0, 0, 1, -1, 1, -1, 1, -1]
             # iterate through two lists
@@ -45,7 +63,7 @@ class King(Piece):
                             legal_moves.append([new_row, new_col])
                     else:
                         legal_moves.append([new_row, new_col])
-        return start_pos, legal_moves
+        return legal_moves
 
 
 class Queen(Piece):
@@ -57,10 +75,9 @@ class Queen(Piece):
         self.name = name
         self.value = 9
 
-    def getLegalMoves(self, game_state, white_to_move):
+    def getLegalMoves(self, game_state, color_to_move):
         legal_moves = []
-        start_pos = [self.row, self.col]
-        if self.checkColorTurn(self.color, white_to_move):
+        if self.checkColorTurn(self.color, color_to_move):
             # copied from Rook
             # move right until other piece or boundary
             for i in range(7):  # maximum
@@ -183,7 +200,7 @@ class Queen(Piece):
                         legal_moves.append([new_row, new_col])
                 else:
                     break
-        return start_pos, legal_moves
+        return legal_moves
 
 
 class Rook(Piece):
@@ -195,10 +212,9 @@ class Rook(Piece):
         self.name = name
         self.value = 5
 
-    def getLegalMoves(self, game_state, white_to_move):
+    def getLegalMoves(self, game_state, color_to_move):
         legal_moves = []
-        start_pos = [self.row, self.col]
-        if self.checkColorTurn(self.color, white_to_move):
+        if self.checkColorTurn(self.color, color_to_move):
             # move right until other piece or boundary
             for i in range(7):  # maximum
                 new_col = self.col+1+i
@@ -259,7 +275,7 @@ class Rook(Piece):
                         legal_moves.append([new_row, new_col])
                 else:
                     break
-        return start_pos, legal_moves
+        return legal_moves
 
 
 class Knight(Piece):
@@ -271,10 +287,10 @@ class Knight(Piece):
         self.name = name
         self.value = 3
 
-    def getLegalMoves(self, game_state, white_to_move):
+    def getLegalMoves(self, game_state, color_to_move):
         legal_moves = []
         start_pos = [self.row, self.col]
-        if self.checkColorTurn(self.color, white_to_move):
+        if self.checkColorTurn(self.color, color_to_move):
             # move two squares in each direction
             rows_add = [2, -2, 0, 0]
             cols_add = [0, 0, 2, -2]
@@ -301,7 +317,7 @@ class Knight(Piece):
                                     legal_moves.append([new_row, new_col])
                             else:
                                 legal_moves.append([new_row, new_col])
-        return start_pos, legal_moves
+        return legal_moves
 
 
 class Bishop(Piece):
@@ -313,10 +329,9 @@ class Bishop(Piece):
         self.name = name
         self.value = 3
 
-    def getLegalMoves(self, game_state, white_to_move):
+    def getLegalMoves(self, game_state, color_to_move):
         legal_moves = []
-        start_pos = [self.row, self.col]
-        if self.checkColorTurn(self.color, white_to_move):
+        if self.checkColorTurn(self.color, color_to_move):
             # move right up until other piece or boundary
             for i in range(7):  # maximum
                 new_col = self.col + 1 + i
@@ -377,44 +392,49 @@ class Bishop(Piece):
                         legal_moves.append([new_row, new_col])
                 else:
                     break
-        return start_pos, legal_moves
+        return legal_moves
 
 
 class Pawn(Piece):
-    def __init__(self, row, col, color, name):
+    def __init__(self, row, col, color, name, start_row):
         super().__init__()
         self.row = row
         self.col = col
         self.color = color
         self.name = name
-        self.start_row = row
+        self.start_row = start_row
         self.value = 1
 
-    def getLegalMoves(self, game_state, white_to_move):
+    def getLegalMoves(self, game_state, color_to_move):
         legal_moves = []
-        start_pos = [self.row, self.col]
         # TODO: add en passant
-        if self.checkColorTurn(self.color, white_to_move):
+        if self.checkColorTurn(self.color, color_to_move):
             if self.start_row == 1:
                 if self.row == self.start_row:
                     for i in range(2):
                         new_row = self.row+i+1
                         new_col = self.col
                         if self.checkBoundaries(new_row, new_col):
-                            if not game_state[new_row][new_col]:  # only move to empty squares when moving straight
+                            if not self.checkOccupied(new_row, new_col, game_state):  # only move to empty squares when moving straight
                                 legal_moves.append([new_row, new_col])
+                            else:
+                                break
                 else:
                     new_row = self.row+1
                     new_col = self.col
                     if self.checkBoundaries(new_row, new_col):
-                        if not game_state[new_row][new_col]:  # only move to empty squares when moving straight
+                        if not self.checkOccupied(new_row, new_col, game_state):  # only move to empty squares when moving straight
                             legal_moves.append([new_row, new_col])
                 # capture
-                new_row = self.row+1
-                new_col = self.col+1
-                if self.checkBoundaries(new_row, new_col):
-                    if self.checkCapturedColor(game_state[new_row][new_col].color, self.color):
-                        legal_moves.append([new_row, new_col])
+                rows_add = [1, 1]
+                cols_add = [1, -1]
+                for row_add, col_add in zip(rows_add, cols_add):
+                    new_row = self.row+row_add
+                    new_col = self.col+col_add
+                    if self.checkBoundaries(new_row, new_col):
+                        if self.checkOccupied(new_row, new_col, game_state):  # diagonal is only allowed when enemy captured
+                            if self.checkCapturedColor(game_state[new_row][new_col].color, self.color):
+                                legal_moves.append([new_row, new_col])
 
             elif self.start_row == 6:
                 if self.row == self.start_row:
@@ -422,19 +442,24 @@ class Pawn(Piece):
                         new_row = self.row-i-1
                         new_col = self.col
                         if self.checkBoundaries(new_row, new_col):
-                            if not game_state[new_row][new_col]:  # only move to empty squares when moving straight
+                            if not self.checkOccupied(new_row, new_col, game_state):  # only move to empty squares when moving straight
                                 legal_moves.append([new_row, new_col])
+                            else:
+                                break
                 else:
                     new_row = self.row-1
                     new_col = self.col
                     if self.checkBoundaries(new_row, new_col):
-                        if not game_state[new_row][new_col]:  # only move to empty squares when moving straight
+                        if not self.checkOccupied(new_row, new_col, game_state):  # only move to empty squares when moving straight
                             legal_moves.append([new_row, new_col])
                 # capture
-                new_row = self.row-1
-                new_col = self.col-1
-                if self.checkBoundaries(new_row, new_col):
-                    if game_state[new_row][new_col]:  # diagonal is only allowed when enemy captured
-                        if self.checkCapturedColor(game_state[new_row][new_col].color, self.color):
-                            legal_moves.append([new_row, new_col])
-        return start_pos, legal_moves
+                rows_add = [-1, -1]
+                cols_add = [1, -1]
+                for row_add, col_add in zip(rows_add, cols_add):
+                    new_row = self.row + row_add
+                    new_col = self.col + col_add
+                    if self.checkBoundaries(new_row, new_col):
+                        if self.checkOccupied(new_row, new_col, game_state):  # diagonal is only allowed when enemy captured
+                            if self.checkCapturedColor(game_state[new_row][new_col].color, self.color):
+                                legal_moves.append([new_row, new_col])
+        return legal_moves
