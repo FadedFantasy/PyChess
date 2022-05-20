@@ -86,8 +86,10 @@ class Board:
         """
         self.drawSquares(screen)
         self.drawPieces(screen)
-        if start_pos and legal_moves:
-            self.drawLegalMoves(screen, start_pos, legal_moves)
+        if start_pos:
+            self.drawFirstClickPos(screen, start_pos)
+        if legal_moves:
+            self.drawLegalMoves(screen, legal_moves)
 
     def drawSquares(self, screen):
         """
@@ -109,54 +111,53 @@ class Board:
                 if piece:  # not an empty square
                     screen.blit(self.images[piece.name[:2]], p.Rect(col * self.sq_size, row * self.sq_size, self.sq_size, self.sq_size))
 
-    def drawLegalMoves(self, screen, start_pos, legal_moves):
-        p.draw.rect(screen, [189, 0, 0], p.Rect(start_pos[1] * self.sq_size, start_pos[0] * self.sq_size, self.sq_size, self.sq_size), 3)
+    def drawLegalMoves(self, screen, legal_moves):
         for legal_move in legal_moves:
             p.draw.circle(screen, [189, 0, 0], ((legal_move[1] * self.sq_size)+self.sq_size//2, (legal_move[0] * self.sq_size)+self.sq_size//2), self.sq_size//2, 3)
 
-    def click(self, legal_moves, player_clicks):
+    def drawFirstClickPos(self, screen,  start_pos):
+        p.draw.rect(screen, [189, 0, 0],
+                    p.Rect(start_pos[1] * self.sq_size, start_pos[0] * self.sq_size, self.sq_size, self.sq_size), 3)
+
+    def firstClickSelect(self):
         location = p.mouse.get_pos()  # (x,y) location of mouse
         col = location[0] // self.sq_size
         row = location[1] // self.sq_size
         square_name = self.getSquareName(row, col)
-        # select first piece to move
-        if Piece.checkOccupied(row, col, self.game_state) and not player_clicks:
+        pos = []
+        piece = None
+        legal_moves = []
+        # select piece to move and piece is right color
+        if Piece.checkOccupied(row, col, self.game_state) and self.game_state[row][col].color == self.color_to_move:
+            pos = [row, col]
             piece = self.game_state[row][col]
-            start_pos = [row, col]
             legal_moves = piece.getLegalMoves(self.game_state, self.color_to_move)
-            if legal_moves:
-                player_clicks.append(start_pos)
             print(piece)
             print(piece.name, piece.row, piece.col)
-            print(legal_moves)
+            print(f'legal_moves = {legal_moves}')
             print(square_name)
-        # choose free square
-        elif not Piece.checkOccupied(row, col, self.game_state) and player_clicks:
-            start_pos = []
-            end_pos = [row, col]
-            player_clicks.append(end_pos)
-        # choose occupied square
-        elif Piece.checkOccupied(row, col, self.game_state) and player_clicks:
-            start_pos = []
-            end_pos = [row, col]
-            player_clicks.append(end_pos)
-        # click on free square without having chosen a piece before or trying to move wrong piece
         else:
-            start_pos = []
-            legal_moves = []
             print(square_name)
-        return start_pos, legal_moves, player_clicks
+        return pos, piece, legal_moves
 
-    def performMove(self, player_clicks, legal_moves):
-        if player_clicks[1] in legal_moves:
-            piece = self.game_state[player_clicks[0][0]][player_clicks[0][1]]
-            piece.row = player_clicks[1][0]
-            piece.col = player_clicks[1][1]
-            self.game_state[player_clicks[1][0]][player_clicks[1][1]] = piece
-            self.game_state[player_clicks[0][0]][player_clicks[0][1]] = None
-            return True
-        else:
-            return False
+    def secondClickSelect(self, legal_moves):
+        location = p.mouse.get_pos()  # (x,y) location of mouse
+        col = location[0] // self.sq_size
+        row = location[1] // self.sq_size
+        square_name = self.getSquareName(row, col)
+        end_pos = []
+        is_move = False
+        if [row, col] in legal_moves:
+            end_pos = [row, col]
+            is_move = True
+        print(square_name)
+        return end_pos, is_move
+
+    def performMove(self, piece, start_pos, end_pos):
+        self.game_state[start_pos[0]][start_pos[1]] = None
+        self.game_state[end_pos[0]][end_pos[1]] = piece
+        piece.row = end_pos[0]
+        piece.col = end_pos[1]
 
     def getSquareName(self, row, col):
         if self.player_color == 'b':

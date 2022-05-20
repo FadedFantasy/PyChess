@@ -1,2 +1,2 @@
 # PyChess
-A python chess game with an self developed engine
+A python chess game with a self developed engine
