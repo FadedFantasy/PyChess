@@ -31,10 +31,12 @@ while running:
                     end_pos, is_move = board.secondClickSelect(legal_moves)
                     if is_move:
                         board.performMove(piece, start_pos, end_pos)
+                        board.updatePiecesList()
                         if board.color_to_move == 'w':
                             board.color_to_move = 'b'
                         else:
                             board.color_to_move = 'w'
+                        board.checkCheckmate()
                     start_pos = []
                     piece = None
                     legal_moves = []

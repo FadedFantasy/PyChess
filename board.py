@@ -1,6 +1,7 @@
 import pygame as p
 import numpy as np
 from pieces import King, Queen, Pawn, Bishop, Knight, Rook, Piece
+import copy
 
 
 class Board:
@@ -11,18 +12,18 @@ class Board:
         self.player_color = player_color
         self.game_state = self.initializeBoard()
         self.images = self.loadImages()
-        self.pieces = self.initializePieces()
+        self.pieces = self.initializePiecesAndReplaceGameState()
         self.color_to_move = 'w'
 
     def loadImages(self):
         """
         Initialize a global dict of images. This will be called exactly once
         """
-        pieces = ['wp', 'wR', 'wN', 'wK', 'wQ', 'wB', 'bp', 'bR', 'bN', 'bK', 'bQ', 'bB']
+        pieces_str = ['wp', 'wR', 'wN', 'wK', 'wQ', 'wB', 'bp', 'bR', 'bN', 'bK', 'bQ', 'bB']
         images = {}
-        for piece in pieces:
+        for piece_str in pieces_str:
             # transform scale: scales the image to (width, height)
-            images[piece] = p.transform.scale(p.image.load(r'images/' + piece + '.png'), (self.sq_size, self.sq_size))
+            images[piece_str] = p.transform.scale(p.image.load(r'images/' + piece_str + '.png'), (self.sq_size, self.sq_size))
         return images
 
     def initializeBoard(self):
@@ -50,35 +51,36 @@ class Board:
             ])
         return board
 
-    def initializePieces(self):
+    def initializePiecesAndReplaceGameState(self):
         """
-        pieces is a dict that contains all piece objects/instances
+        pieces is a list that contains all piece objects/instances. Additionally, the game_state is updated the
+        these objects instead of strings
         """
-        pieces = {}
+        pieces = []
         for row in range(self.game_state.shape[0]):
             for col in range(self.game_state.shape[1]):
                 # everything that is not None
                 if self.game_state[row][col]:
                     # second letter
                     if self.game_state[row][col][1] == 'p':
-                        pieces[self.game_state[row][col]] = Pawn(row, col, self.game_state[row][col][0], self.game_state[row][col], row)
+                        piece = Pawn(row, col, self.game_state[row][col][0], self.game_state[row][col], row)
                     elif self.game_state[row][col][1] == 'R':
-                        pieces[self.game_state[row][col]] = Rook(row, col, self.game_state[row][col][0], self.game_state[row][col])
+                        piece = Rook(row, col, self.game_state[row][col][0], self.game_state[row][col])
                     elif self.game_state[row][col][1] == 'N':
-                        pieces[self.game_state[row][col]] = Knight(row, col, self.game_state[row][col][0], self.game_state[row][col])
+                        piece = Knight(row, col, self.game_state[row][col][0], self.game_state[row][col])
                     elif self.game_state[row][col][1] == 'B':
-                        pieces[self.game_state[row][col]] = Bishop(row, col, self.game_state[row][col][0], self.game_state[row][col])
+                        piece = Bishop(row, col, self.game_state[row][col][0], self.game_state[row][col])
                     elif self.game_state[row][col][1] == 'K':
-                        pieces[self.game_state[row][col]] = King(row, col, self.game_state[row][col][0], self.game_state[row][col])
+                        piece = King(row, col, self.game_state[row][col][0], self.game_state[row][col])
+                        if self.game_state[row][col][0] == 'w':
+                            self.w_king = piece
+                        else:
+                            self.b_king = piece
                     elif self.game_state[row][col][1] == 'Q':
-                        pieces[self.game_state[row][col]] = Queen(row, col, self.game_state[row][col][0], self.game_state[row][col])
-        self.replaceBoardWithPieceObjects(pieces)
+                        piece = Queen(row, col, self.game_state[row][col][0], self.game_state[row][col])
+                    self.game_state[row][col] = piece
+                    pieces.append(piece)
         return pieces
-
-    def replaceBoardWithPieceObjects(self, pieces):
-        # iterate over pieces dict
-        for key, value in pieces.items():
-            self.game_state[pieces[key].row][pieces[key].col] = value
 
     def drawGameState(self, screen, start_pos, legal_moves):
         """
@@ -132,6 +134,7 @@ class Board:
             pos = [row, col]
             piece = self.game_state[row][col]
             legal_moves = piece.getLegalMoves(self.game_state, self.color_to_move)
+            legal_moves = self.checkKingCapture(legal_moves, piece)
             print(piece)
             print(piece.name, piece.row, piece.col)
             print(f'legal_moves = {legal_moves}')
@@ -155,9 +158,107 @@ class Board:
 
     def performMove(self, piece, start_pos, end_pos):
         self.game_state[start_pos[0]][start_pos[1]] = None
-        self.game_state[end_pos[0]][end_pos[1]] = piece
         piece.row = end_pos[0]
         piece.col = end_pos[1]
+        self.game_state[end_pos[0]][end_pos[1]] = piece
+
+    def updatePiecesList(self):
+        """
+        Updates the pieces list that is used as a class variable
+        :return:
+        """
+        self.pieces = []
+        for row in range(self.game_state.shape[0]):
+            for col in range(self.game_state.shape[1]):
+                # everything that is not None
+                if self.game_state[row][col]:
+                    self.pieces.append(self.game_state[row][col])
+
+    @staticmethod
+    def updatePiecesListSimulated(game_state):
+        """
+        Updates the pieces list that is used as a class variable for a simulated move
+        :return:
+        """
+        pieces = []
+        for row in range(game_state.shape[0]):
+            for col in range(game_state.shape[1]):
+                # everything that is not None
+                if game_state[row][col]:
+                    pieces.append(game_state[row][col])
+        return pieces
+
+    def checkKingCapture(self, legal_moves, piece_to_move):
+        """
+        Removes the legal_moves that would result in a king capture. For that every move of legal moves will be
+        simulated on a copy of self.game_state, self.pieces and the piece that would move (piece_to_move).
+        Afterwards it will be checked if any legal_move of the enemy would result in a king capture
+        :return:
+        """
+        # create deep copies of self.pieces and self.game_state to simulate the move
+        piece_to_move_copy = copy.deepcopy(piece_to_move)
+        legal_moves_copy = copy.deepcopy(legal_moves)
+
+        for move in legal_moves:
+            game_state_copy = copy.deepcopy(self.game_state)
+            piece_to_move_copy = copy.deepcopy(piece_to_move)
+            game_state_copy[piece_to_move_copy.row][piece_to_move_copy.col] = None
+            piece_to_move_copy.row = move[0]
+            piece_to_move_copy.col = move[1]
+            game_state_copy[move[0]][move[1]] = piece_to_move_copy
+            pieces_copy = self.updatePiecesListSimulated(game_state_copy)
+
+            # get pos of own king
+            for piece_copy_for_king in pieces_copy:
+                if piece_copy_for_king.name[1] == 'K' and piece_copy_for_king.color == self.color_to_move:
+                    king_pos = [piece_copy_for_king.row, piece_copy_for_king.col]
+                    break
+
+            for piece_copy in pieces_copy:
+                if not self.color_to_move == piece_copy.color:
+                    if self.color_to_move == 'w':
+                        color_to_move_copy = 'b'
+                    else:
+                        color_to_move_copy = 'w'
+                    legal_moves_piece = piece_copy.getLegalMoves(game_state_copy, color_to_move_copy)
+                    for legal_move_piece in legal_moves_piece:
+                        if king_pos == legal_move_piece:
+                            if move in legal_moves_copy:
+                                legal_moves_copy.remove(move)
+        return legal_moves_copy
+
+    def isCheck(self, color_attacking):
+        # get enemy king pos
+        if color_attacking == 'w':
+            enemy_king_pos = [self.b_king.row, self.b_king.col]
+        else:
+            enemy_king_pos = [self.w_king.row, self.w_king.col]
+        for piece in self.pieces:
+            if color_attacking == piece.color:
+                legal_moves = piece.getLegalMoves(self.game_state, color_attacking)
+                legal_moves = self.checkKingCapture(legal_moves, piece)
+                if enemy_king_pos in legal_moves:
+                    return True
+        return False
+
+    def checkCheckmate(self):
+        legal_moves_all = []
+        if self.color_to_move == 'w':
+            color_attacking = 'b'
+            color_defending = 'w'
+        else:
+            color_attacking = 'w'
+            color_defending = 'b'
+        for piece in self.pieces:
+            if color_defending == piece.color:
+                legal_moves = piece.getLegalMoves(self.game_state, color_defending)
+                legal_moves = self.checkKingCapture(legal_moves, piece)
+                legal_moves_all.extend(legal_moves)
+        if not legal_moves_all:
+            if self.isCheck(color_attacking):
+                print(f'GAME OVER! {color_attacking} won by checkmate')
+            else:
+                print(f'GAME OVER! It is a stalemate')
 
     def getSquareName(self, row, col):
         if self.player_color == 'b':
