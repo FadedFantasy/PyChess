@@ -16,6 +16,7 @@ class Board:
         self.color_to_move = 'w'
         self.b_king = None
         self.w_king = None
+        self.move_log = []
 
     def loadImages(self):
         """
@@ -135,7 +136,7 @@ class Board:
         if Piece.checkOccupied(row, col, self.game_state) and self.game_state[row][col].color == self.color_to_move:
             pos = [row, col]
             piece = self.game_state[row][col]
-            legal_moves = piece.getLegalMoves(self.game_state, self.color_to_move)
+            legal_moves = piece.getLegalMoves(self.game_state, self.color_to_move, self.move_log)
             if piece.name[1] == 'K':
                 if self.color_to_move == 'w':
                     color_attacking = 'b'
@@ -166,21 +167,30 @@ class Board:
         return end_pos, is_move
 
     def performMove(self, piece, start_pos, end_pos):
-        # promote Pawn
+        # pawn
         if piece.name[1] == 'p':
+            # promote
             if end_pos[0] == 7 or end_pos[0] == 0:
                 piece = Queen(end_pos[0], end_pos[1], piece.color, f'{piece.color}Q2')
+            # en passant
+            if not Piece.checkOccupied(end_pos[0], end_pos[1], self.game_state) and end_pos[1] != start_pos[1]:
+                if piece.start_row == 1:
+                    self.game_state[end_pos[0]-1][end_pos[1]] = None
+                elif piece.start_row == 6:
+                    self.game_state[end_pos[0]+1][end_pos[1]] = None
         # set move flag for castling
         piece.was_moved = True
 
+        # move
         self.game_state[start_pos[0]][start_pos[1]] = None
         piece.row = end_pos[0]
         piece.col = end_pos[1]
         self.game_state[end_pos[0]][end_pos[1]] = piece
 
-        # if king castles move rook
+        # if king castling moves rook
         if piece.name[1] == 'K' and abs(start_pos[1]-end_pos[1]) > 1:
             rook, dir_of_king = self.getClosestRookToKing(piece)
+            rook_initial_pos = [rook.row, rook.col]
             self.game_state[rook.row][rook.col] = None
             if dir_of_king == 'right':
                 rook.row = piece.row
@@ -189,6 +199,9 @@ class Board:
                 rook.row = piece.row
                 rook.col = piece.col + 1
             self.game_state[rook.row][rook.col] = rook
+            self.move_log.append([piece.name, start_pos, end_pos, rook.name, rook_initial_pos, [rook.row, rook.col]])
+        else:
+            self.move_log.append([piece.name, start_pos, end_pos])
 
     def getClosestRookToKing(self, king):
         dir_of_king = ''
@@ -265,7 +278,7 @@ class Board:
                         color_to_move_copy = 'b'
                     else:
                         color_to_move_copy = 'w'
-                    legal_moves_piece = piece_copy.getLegalMoves(game_state_copy, color_to_move_copy)
+                    legal_moves_piece = piece_copy.getLegalMoves(game_state_copy, color_to_move_copy, self.move_log)
                     if piece_copy.name[1] == 'K':
                         legal_moves_piece = piece_copy.addCastlingMoves(self.player_color, game_state_copy, pieces_copy, legal_moves_piece)
                     for legal_move_piece in legal_moves_piece:
@@ -299,7 +312,7 @@ class Board:
             enemy_king_pos = [self.w_king.row, self.w_king.col]
         for piece in self.pieces:
             if color_attacking == piece.color:
-                legal_moves = piece.getLegalMoves(self.game_state, color_attacking)
+                legal_moves = piece.getLegalMoves(self.game_state, color_attacking, self.move_log)
                 if piece.name[1] == 'K':
                     legal_moves = piece.addCastlingMoves(self.player_color, self.game_state, self.pieces, legal_moves)
                 legal_moves = self.checkKingCapture(legal_moves, piece)
@@ -317,7 +330,7 @@ class Board:
             color_defending = 'b'
         for piece in self.pieces:
             if color_defending == piece.color:
-                legal_moves = piece.getLegalMoves(self.game_state, color_defending)
+                legal_moves = piece.getLegalMoves(self.game_state, color_defending, self.move_log)
                 if piece.name[1] == 'K':
                     legal_moves = piece.addCastlingMoves(self.player_color, self.game_state, self.pieces, legal_moves)
                 legal_moves = self.checkKingCapture(legal_moves, piece)

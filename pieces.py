@@ -48,7 +48,7 @@ class King(Piece):
         self.value = 100
         self.was_moved = False
 
-    def getLegalMoves(self, game_state, color_to_move):
+    def getLegalMoves(self, game_state, color_to_move, move_log):
         legal_moves = []
         if self.checkColorTurn(self.color, color_to_move):
             rows_add = [1, -1, 0, 0, 1, 1, -1, -1]
@@ -126,7 +126,7 @@ class Queen(Piece):
         self.value = 9
         self.was_moved = False
 
-    def getLegalMoves(self, game_state, color_to_move):
+    def getLegalMoves(self, game_state, color_to_move, move_log):
         legal_moves = []
         if self.checkColorTurn(self.color, color_to_move):
             # copied from Rook
@@ -264,7 +264,7 @@ class Rook(Piece):
         self.value = 5
         self.was_moved = False
 
-    def getLegalMoves(self, game_state, color_to_move):
+    def getLegalMoves(self, game_state, color_to_move, move_log):
         legal_moves = []
         if self.checkColorTurn(self.color, color_to_move):
             # move right until other piece or boundary
@@ -340,7 +340,7 @@ class Knight(Piece):
         self.value = 3
         self.was_moved = False
 
-    def getLegalMoves(self, game_state, color_to_move):
+    def getLegalMoves(self, game_state, color_to_move, move_log):
         legal_moves = []
         start_pos = [self.row, self.col]
         if self.checkColorTurn(self.color, color_to_move):
@@ -383,7 +383,7 @@ class Bishop(Piece):
         self.value = 3
         self.was_moved = False
 
-    def getLegalMoves(self, game_state, color_to_move):
+    def getLegalMoves(self, game_state, color_to_move, move_log):
         legal_moves = []
         if self.checkColorTurn(self.color, color_to_move):
             # move right up until other piece or boundary
@@ -460,7 +460,7 @@ class Pawn(Piece):
         self.value = 1
         self.was_moved = False
 
-    def getLegalMoves(self, game_state, color_to_move):
+    def getLegalMoves(self, game_state, color_to_move, move_log):
         legal_moves = []
         # TODO: add en passant
         if self.checkColorTurn(self.color, color_to_move):
@@ -491,6 +491,32 @@ class Pawn(Piece):
                             if self.checkCapturedColor(game_state[new_row][new_col].color, self.color):
                                 legal_moves.append([new_row, new_col])
 
+                # en passant
+                piece_right = None
+                piece_left = None
+                if self.checkBoundaries(self.row, self.col + 1):
+                    if self.checkOccupied(self.row, self.col + 1, game_state):
+                        piece_right = game_state[self.row, self.col + 1]
+                if self.checkBoundaries(self.row, self.col - 1):
+                    if self.checkOccupied(self.row, self.col - 1, game_state):
+                        piece_left = game_state[self.row, self.col - 1]
+                if move_log:
+                    if piece_right:
+                        if move_log[-1][0] == piece_right.name:
+                            if abs(move_log[-1][1][0] - move_log[-1][2][0]) == 2:
+                                new_row = self.row + 1
+                                new_col = self.col + 1
+                                if self.checkCapturedColor(piece_right.color, self.color):
+                                    legal_moves.append([new_row, new_col])
+                if move_log:
+                    if piece_left:
+                        if move_log[-1][0] == piece_left.name:
+                            if abs(move_log[-1][1][0] - move_log[-1][2][0]) == 2:
+                                new_row = self.row + 1
+                                new_col = self.col - 1
+                                if self.checkCapturedColor(piece_left.color, self.color):
+                                    legal_moves.append([new_row, new_col])
+
             elif self.start_row == 6:
                 if self.row == self.start_row:
                     for i in range(2):
@@ -517,4 +543,29 @@ class Pawn(Piece):
                         if self.checkOccupied(new_row, new_col, game_state):  # diagonal is only allowed when enemy captured
                             if self.checkCapturedColor(game_state[new_row][new_col].color, self.color):
                                 legal_moves.append([new_row, new_col])
+
+                # en passant
+                piece_right = None
+                piece_left = None
+                if self.checkBoundaries(self.row, self.col+1):
+                    if self.checkOccupied(self.row, self.col+1, game_state):
+                        piece_right = game_state[self.row, self.col+1]
+                if self.checkBoundaries(self.row, self.col-1):
+                    if self.checkOccupied(self.row, self.col-1, game_state):
+                        piece_left = game_state[self.row, self.col-1]
+                if move_log:
+                    if piece_right:
+                        if move_log[-1][0] == piece_right.name:
+                            if abs(move_log[-1][1][0] - move_log[-1][2][0]) == 2:
+                                new_row = self.row - 1
+                                new_col = self.col + 1
+                                if self.checkCapturedColor(piece_right.color, self.color):
+                                    legal_moves.append([new_row, new_col])
+                    if piece_left:
+                        if move_log[-1][0] == piece_left.name:
+                            if abs(move_log[-1][1][0] - move_log[-1][2][0]) == 2:
+                                new_row = self.row - 1
+                                new_col = self.col - 1
+                                if self.checkCapturedColor(piece_left.color, self.color):
+                                    legal_moves.append([new_row, new_col])
         return legal_moves

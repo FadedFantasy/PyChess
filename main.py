@@ -12,7 +12,6 @@ clock = p.time.Clock()
 screen.fill(p.Color('white'))
 player_color = 'w'
 board = Board(width, height, player_color)
-move_log = []
 start_pos = []
 legal_moves = []
 piece = None
