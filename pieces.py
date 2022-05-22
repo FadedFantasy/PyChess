@@ -46,6 +46,7 @@ class King(Piece):
         self.color = color
         self.name = name
         self.value = 100
+        self.was_moved = False
 
     def getLegalMoves(self, game_state, color_to_move):
         legal_moves = []
@@ -57,12 +58,61 @@ class King(Piece):
                 new_row = self.row+row_add
                 new_col = self.col+col_add
                 if self.checkBoundaries(new_row, new_col):
-                    # TODO: check if the move would result in a check (check if this square is a legal move for all other pieces)
                     if self.checkOccupied(new_row, new_col, game_state):
                         if self.checkCapturedColor(game_state[new_row][new_col].color, self.color):
                             legal_moves.append([new_row, new_col])
                     else:
                         legal_moves.append([new_row, new_col])
+        return legal_moves
+
+    def addCastlingMoves(self, player_color, game_state, pieces_list, legal_moves):
+        if not self.was_moved:
+            rook_short = None
+            rook_long = None
+            if player_color == 'w':
+                # get rooks
+                for piece in pieces_list:
+                    if piece.name[1] == 'R' and piece.name[2] == '2' and piece.color == self.color:
+                        rook_short = piece
+                    if piece.name[1] == 'R' and piece.name[2] == '1' and piece.color == self.color:
+                        rook_long = piece
+                cols_short = [1, 2]
+                cols_long = [-1, -2, -3]
+            else:
+                # get rooks
+                for piece in pieces_list:
+                    if piece.name[1] == 'R' and piece.name[2] == '2' and piece.color == self.color:
+                        rook_long = piece
+                    if piece.name[1] == 'R' and piece.name[2] == '1' and piece.color == self.color:
+                        rook_short = piece
+                cols_long = [1, 2]
+                cols_short = [-1, -2, -3]
+
+            if rook_short:
+                if not rook_short.was_moved:
+                    short_occupied = False
+                    for col_short in cols_short:
+                        new_col = self.col + col_short
+                        if self.checkOccupied(self.row, new_col, game_state):
+                            short_occupied = True
+                    if not short_occupied:
+                        if player_color == 'w':
+                            legal_moves.append([self.row, self.col + 2])
+                        else:
+                            legal_moves.append([self.row, self.col - 2])
+
+            if rook_long:
+                if not rook_long.was_moved:
+                    long_occupied = False
+                    for col_long in cols_long:
+                        new_col = self.col + col_long
+                        if self.checkOccupied(self.row, new_col, game_state):
+                            long_occupied = True
+                    if not long_occupied:
+                        if player_color == 'w':
+                            legal_moves.append([self.row, self.col - 2])
+                        else:
+                            legal_moves.append([self.row, self.col + 2])
         return legal_moves
 
 
@@ -74,6 +124,7 @@ class Queen(Piece):
         self.color = color
         self.name = name
         self.value = 9
+        self.was_moved = False
 
     def getLegalMoves(self, game_state, color_to_move):
         legal_moves = []
@@ -211,6 +262,7 @@ class Rook(Piece):
         self.color = color
         self.name = name
         self.value = 5
+        self.was_moved = False
 
     def getLegalMoves(self, game_state, color_to_move):
         legal_moves = []
@@ -286,6 +338,7 @@ class Knight(Piece):
         self.color = color
         self.name = name
         self.value = 3
+        self.was_moved = False
 
     def getLegalMoves(self, game_state, color_to_move):
         legal_moves = []
@@ -328,6 +381,7 @@ class Bishop(Piece):
         self.color = color
         self.name = name
         self.value = 3
+        self.was_moved = False
 
     def getLegalMoves(self, game_state, color_to_move):
         legal_moves = []
@@ -404,6 +458,7 @@ class Pawn(Piece):
         self.name = name
         self.start_row = start_row
         self.value = 1
+        self.was_moved = False
 
     def getLegalMoves(self, game_state, color_to_move):
         legal_moves = []

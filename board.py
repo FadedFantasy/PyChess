@@ -14,6 +14,8 @@ class Board:
         self.images = self.loadImages()
         self.pieces = self.initializePiecesAndReplaceGameState()
         self.color_to_move = 'w'
+        self.b_king = None
+        self.w_king = None
 
     def loadImages(self):
         """
@@ -134,6 +136,13 @@ class Board:
             pos = [row, col]
             piece = self.game_state[row][col]
             legal_moves = piece.getLegalMoves(self.game_state, self.color_to_move)
+            if piece.name[1] == 'K':
+                if self.color_to_move == 'w':
+                    color_attacking = 'b'
+                else:
+                    color_attacking = 'w'
+                if not self.isCheck(color_attacking):
+                    legal_moves = piece.addCastlingMoves(self.player_color, self.game_state, self.pieces, legal_moves)
             legal_moves = self.checkKingCapture(legal_moves, piece)
             print(piece)
             print(piece.name, piece.row, piece.col)
@@ -157,10 +166,42 @@ class Board:
         return end_pos, is_move
 
     def performMove(self, piece, start_pos, end_pos):
+        # promote Pawn
+        if piece.name[1] == 'p':
+            if end_pos[0] == 7 or end_pos[0] == 0:
+                piece = Queen(end_pos[0], end_pos[1], piece.color, f'{piece.color}Q2')
+        # set move flag for castling
+        piece.was_moved = True
+
         self.game_state[start_pos[0]][start_pos[1]] = None
         piece.row = end_pos[0]
         piece.col = end_pos[1]
         self.game_state[end_pos[0]][end_pos[1]] = piece
+
+        # if king castles move rook
+        if piece.name[1] == 'K' and abs(start_pos[1]-end_pos[1]) > 1:
+            rook, dir_of_king = self.getClosestRookToKing(piece)
+            self.game_state[rook.row][rook.col] = None
+            if dir_of_king == 'right':
+                rook.row = piece.row
+                rook.col = piece.col - 1
+            if dir_of_king == 'left':
+                rook.row = piece.row
+                rook.col = piece.col + 1
+            self.game_state[rook.row][rook.col] = rook
+
+    def getClosestRookToKing(self, king):
+        dir_of_king = ''
+        rook = None
+        for piece in self.pieces:
+            if piece.name[1] == 'R' and piece.row == king.row:
+                if abs(piece.col-king.col) <= 2:
+                    if piece.col-king.col > 0:
+                        dir_of_king = 'right'
+                    else:
+                        dir_of_king = 'left'
+                    rook = piece
+        return rook, dir_of_king
 
     def updatePiecesList(self):
         """
@@ -173,6 +214,10 @@ class Board:
                 # everything that is not None
                 if self.game_state[row][col]:
                     self.pieces.append(self.game_state[row][col])
+                    if self.game_state[row][col].name[1] == 'K' and self.game_state[row][col].name[0] == 'w':
+                        self.w_king = self.game_state[row][col]
+                    if self.game_state[row][col].name[1] == 'K' and self.game_state[row][col].name[0] == 'b':
+                        self.b_king = self.game_state[row][col]
 
     @staticmethod
     def updatePiecesListSimulated(game_state):
@@ -221,9 +266,28 @@ class Board:
                     else:
                         color_to_move_copy = 'w'
                     legal_moves_piece = piece_copy.getLegalMoves(game_state_copy, color_to_move_copy)
+                    if piece_copy.name[1] == 'K':
+                        legal_moves_piece = piece_copy.addCastlingMoves(self.player_color, game_state_copy, pieces_copy, legal_moves_piece)
                     for legal_move_piece in legal_moves_piece:
                         if king_pos == legal_move_piece:
                             if move in legal_moves_copy:
+                                # remove all castling move if next to king is illegal
+                                if piece_to_move_copy.name[1] == 'K':
+                                    if piece_to_move_copy.color == 'b':
+                                        initial_col = self.b_king.col
+                                        initial_row = self.b_king.row
+                                    else:
+                                        initial_col = self.w_king.col
+                                        initial_row = self.b_king.row
+                                    if initial_row == move[0] and abs(initial_col-move[1]) == 1:
+                                        if move[1] - initial_col > 0:
+                                            move_right = [move[0], move[1]+1]
+                                            if move_right in legal_moves_copy:
+                                                legal_moves_copy.remove(move_right)
+                                        else:
+                                            move_left = [move[0], move[1]-1]
+                                            if move_left in legal_moves_copy:
+                                                legal_moves_copy.remove(move_left)
                                 legal_moves_copy.remove(move)
         return legal_moves_copy
 
@@ -236,6 +300,8 @@ class Board:
         for piece in self.pieces:
             if color_attacking == piece.color:
                 legal_moves = piece.getLegalMoves(self.game_state, color_attacking)
+                if piece.name[1] == 'K':
+                    legal_moves = piece.addCastlingMoves(self.player_color, self.game_state, self.pieces, legal_moves)
                 legal_moves = self.checkKingCapture(legal_moves, piece)
                 if enemy_king_pos in legal_moves:
                     return True
@@ -252,6 +318,8 @@ class Board:
         for piece in self.pieces:
             if color_defending == piece.color:
                 legal_moves = piece.getLegalMoves(self.game_state, color_defending)
+                if piece.name[1] == 'K':
+                    legal_moves = piece.addCastlingMoves(self.player_color, self.game_state, self.pieces, legal_moves)
                 legal_moves = self.checkKingCapture(legal_moves, piece)
                 legal_moves_all.extend(legal_moves)
         if not legal_moves_all:
