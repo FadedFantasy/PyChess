@@ -124,6 +124,12 @@ class Board:
         p.draw.rect(screen, [189, 0, 0],
                     p.Rect(start_pos[1] * self.sq_size, start_pos[0] * self.sq_size, self.sq_size, self.sq_size), 3)
 
+    def changeMovingColor(self):
+        if self.board.color_to_move == 'w':
+            self.board.color_to_move = 'b'
+        else:
+            self.board.color_to_move = 'w'
+
     def firstClickSelect(self):
         location = p.mouse.get_pos()  # (x,y) location of mouse
         col = location[0] // self.sq_size
