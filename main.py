@@ -14,7 +14,6 @@ board = Board(width, height, player_color)
 start_pos = []
 legal_moves = []
 piece = None
-eval = 0.0
 
 running = True
 while running:
@@ -32,18 +31,18 @@ while running:
                         board.performMove(piece, start_pos, end_pos)
                         board.updatePiecesList()
                         board.changeMovingColor()
-                        # eval = board.evaluatePosition()
+                        board.evaluatePosition()
                         board.checkCheckmate()
                     start_pos = []
                     piece = None
                     legal_moves = []
                 # computer moves
                 if not multiplayer and board.color_to_move != player_color:
-                    # piece, start_pos, end_pos = board.getComputerMove()
+                    # piece, start_pos, end_pos = board.getComputerMove(evaluation)
                     board.performMove(piece, start_pos, end_pos)
                     board.updatePiecesList()
                     board.changeMovingColor()
-                    # eval = board.evaluatePosition()
+                    board.evaluatePosition()
                     board.checkCheckmate()
                     start_pos = []
                     piece = None

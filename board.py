@@ -17,6 +17,7 @@ class Board:
         self.b_king = None
         self.w_king = None
         self.move_log = []
+        self.eval = 0.0
 
     def loadImages(self):
         """
@@ -151,12 +152,12 @@ class Board:
                 if not self.isCheck(color_attacking):
                     legal_moves = piece.addCastlingMoves(self.player_color, self.game_state, self.pieces, legal_moves)
             legal_moves = self.checkKingCapture(legal_moves, piece)
-            print(piece)
-            print(piece.name, piece.row, piece.col)
+            print(f'Piece to move: {piece}')
+            print(f'Piece name: {piece.name}, Piece row: {piece.row}, Piece col: {piece.col}')
             print(f'legal_moves = {legal_moves}')
-            print(square_name)
+            print(f'Square name of selected piece: {square_name}')
         else:
-            print(square_name)
+            print(f'Square name of selected square: {square_name}')
         return pos, piece, legal_moves
 
     def secondClickSelect(self, legal_moves):
@@ -169,7 +170,7 @@ class Board:
         if [row, col] in legal_moves:
             end_pos = [row, col]
             is_move = True
-        print(square_name)
+        print(f'Square name of end position square: {square_name}')
         return end_pos, is_move
 
     def performMove(self, piece, start_pos, end_pos):
@@ -208,6 +209,17 @@ class Board:
             self.move_log.append([piece.name, start_pos, end_pos, rook.name, rook_initial_pos, [rook.row, rook.col]])
         else:
             self.move_log.append([piece.name, start_pos, end_pos])
+
+    def evaluatePosition(self):
+        w_eval = 0
+        b_eval = 0
+        for piece in self.pieces:
+            if piece.color == 'w':
+                w_eval += piece.value
+            else:
+                b_eval += piece.value
+        self.eval = w_eval-b_eval
+        print(f'Evaluation: {self.eval}')
 
     def getClosestRookToKing(self, king):
         dir_of_king = ''
