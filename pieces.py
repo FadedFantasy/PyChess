@@ -462,7 +462,6 @@ class Pawn(Piece):
 
     def getLegalMoves(self, game_state, color_to_move, move_log):
         legal_moves = []
-        # TODO: add en passant
         if self.checkColorTurn(self.color, color_to_move):
             if self.start_row == 1:
                 if self.row == self.start_row:
